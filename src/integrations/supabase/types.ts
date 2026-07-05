@@ -14,41 +14,93 @@ export type Database = {
   }
   public: {
     Tables: {
-      tools: {
+      secciones: {
         Row: {
-          category: string
-          created_at: string
-          description: string | null
           id: string
-          is_favorite: boolean
-          name: string
-          section: string
-          tags: string[]
-          url: string
+          nombre: string
+          creado_en: string
         }
         Insert: {
-          category: string
-          created_at?: string
-          description?: string | null
           id?: string
-          is_favorite?: boolean
-          name: string
-          section: string
-          tags?: string[]
-          url: string
+          nombre: string
+          creado_en?: string
         }
         Update: {
-          category?: string
-          created_at?: string
-          description?: string | null
           id?: string
-          is_favorite?: boolean
-          name?: string
-          section?: string
-          tags?: string[]
-          url?: string
+          nombre?: string
+          creado_en?: string
         }
         Relationships: []
+      }
+      categorias: {
+        Row: {
+          id: string
+          nombre: string
+          seccion_id: string
+          creado_en: string
+        }
+        Insert: {
+          id?: string
+          nombre: string
+          seccion_id: string
+          creado_en?: string
+        }
+        Update: {
+          id?: string
+          nombre?: string
+          seccion_id?: string
+          creado_en?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categorias_seccion_id_fkey"
+            columns: ["seccion_id"]
+            isOneToOne: false
+            referencedRelation: "secciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      herramientas: {
+        Row: {
+          id: string
+          nombre: string
+          url: string
+          categoria_id: string
+          descripcion: string | null
+          etiquetas: string[]
+          favorito: boolean
+          creado_en: string
+        }
+        Insert: {
+          id?: string
+          nombre: string
+          url: string
+          categoria_id: string
+          descripcion?: string | null
+          etiquetas?: string[]
+          favorito?: boolean
+          creado_en?: string
+        }
+        Update: {
+          id?: string
+          nombre?: string
+          url?: string
+          categoria_id?: string
+          descripcion?: string | null
+          etiquetas?: string[]
+          favorito?: boolean
+          creado_en?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "herramientas_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

@@ -4,12 +4,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  createTool,
-  deleteTool,
-  fetchTools,
-  updateTool,
-  type Tool,
-  type ToolInput,
+  crearHerramienta,
+  eliminarHerramienta,
+  fetchHerramientas,
+  actualizarHerramienta,
+  type Herramienta,
+  type HerramientaInput,
 } from "@/lib/tools-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,54 +36,54 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-const emptyInput: ToolInput = {
-  name: "",
+const formularioVacio: HerramientaInput = {
+  nombre: "",
   url: "",
-  section: "",
-  category: "",
-  description: "",
-  tags: [],
-  is_favorite: false,
+  seccion: "",
+  categoria: "",
+  descripcion: "",
+  etiquetas: [],
+  favorito: false,
 };
 
 function AdminPage() {
   const qc = useQueryClient();
-  const { data: tools = [], isLoading } = useQuery({
-    queryKey: ["tools"],
-    queryFn: fetchTools,
+  const { data: herramientas = [], isLoading } = useQuery({
+    queryKey: ["herramientas"],
+    queryFn: fetchHerramientas,
   });
 
-  const [editing, setEditing] = useState<Tool | null>(null);
+  const [editando, setEditando] = useState<Herramienta | null>(null);
   const [open, setOpen] = useState(false);
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["tools"] });
+  const invalidar = () => qc.invalidateQueries({ queryKey: ["herramientas"] });
 
-  const createMut = useMutation({
-    mutationFn: createTool,
+  const crearMut = useMutation({
+    mutationFn: crearHerramienta,
     onSuccess: () => {
-      invalidate();
+      invalidar();
       toast.success("Herramienta creada");
       setOpen(false);
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const updateMut = useMutation({
-    mutationFn: ({ id, input }: { id: string; input: Partial<ToolInput> }) =>
-      updateTool(id, input),
+  const actualizarMut = useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Partial<HerramientaInput> }) =>
+      actualizarHerramienta(id, input),
     onSuccess: () => {
-      invalidate();
+      invalidar();
       toast.success("Actualizada");
       setOpen(false);
-      setEditing(null);
+      setEditando(null);
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const deleteMut = useMutation({
-    mutationFn: deleteTool,
+  const eliminarMut = useMutation({
+    mutationFn: eliminarHerramienta,
     onSuccess: () => {
-      invalidate();
+      invalidar();
       toast.success("Eliminada");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -105,20 +105,20 @@ function AdminPage() {
             open={open}
             onOpenChange={(o) => {
               setOpen(o);
-              if (!o) setEditing(null);
+              if (!o) setEditando(null);
             }}
           >
             <DialogTrigger asChild>
-              <Button size="sm" className="gap-1.5" onClick={() => setEditing(null)}>
+              <Button size="sm" className="gap-1.5" onClick={() => setEditando(null)}>
                 <Plus className="h-4 w-4" /> Nueva
               </Button>
             </DialogTrigger>
             <ToolForm
-              initial={editing}
-              submitting={createMut.isPending || updateMut.isPending}
+              initial={editando}
+              submitting={crearMut.isPending || actualizarMut.isPending}
               onSubmit={(input) => {
-                if (editing) updateMut.mutate({ id: editing.id, input });
-                else createMut.mutate(input);
+                if (editando) actualizarMut.mutate({ id: editando.id, input });
+                else crearMut.mutate(input);
               }}
             />
           </Dialog>
@@ -130,25 +130,25 @@ function AdminPage() {
           <p className="py-16 text-center font-mono text-sm text-muted-foreground">
             cargando…
           </p>
-        ) : tools.length === 0 ? (
+        ) : herramientas.length === 0 ? (
           <p className="py-16 text-center font-mono text-sm text-muted-foreground">
             Todavía no hay herramientas. Agregá la primera.
           </p>
         ) : (
           <ul className="divide-y divide-border rounded-lg border border-border bg-card">
-            {tools.map((t) => (
-              <li key={t.id} className="flex items-center gap-3 p-3">
+            {herramientas.map((h) => (
+              <li key={h.id} className="flex items-center gap-3 p-3">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-mono text-sm font-medium">{t.name}</p>
+                  <p className="truncate font-mono text-sm font-medium">{h.nombre}</p>
                   <p className="truncate font-mono text-[11px] text-muted-foreground">
-                    {t.section} / {t.category} · {t.url}
+                    {h.categoria?.seccion?.nombre} / {h.categoria?.nombre} · {h.url}
                   </p>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => {
-                    setEditing(t);
+                    setEditando(h);
                     setOpen(true);
                   }}
                 >
@@ -158,7 +158,7 @@ function AdminPage() {
                   variant="ghost"
                   size="icon"
                   onClick={() => {
-                    if (confirm(`¿Eliminar "${t.name}"?`)) deleteMut.mutate(t.id);
+                    if (confirm(`¿Eliminar "${h.nombre}"?`)) eliminarMut.mutate(h.id);
                   }}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
@@ -177,24 +177,24 @@ function ToolForm({
   submitting,
   onSubmit,
 }: {
-  initial: Tool | null;
+  initial: Herramienta | null;
   submitting: boolean;
-  onSubmit: (input: ToolInput) => void;
+  onSubmit: (input: HerramientaInput) => void;
 }) {
-  const [form, setForm] = useState<ToolInput>(
+  const [form, setForm] = useState<HerramientaInput>(
     initial
       ? {
-          name: initial.name,
+          nombre: initial.nombre,
           url: initial.url,
-          section: initial.section,
-          category: initial.category,
-          description: initial.description ?? "",
-          tags: initial.tags,
-          is_favorite: initial.is_favorite,
+          seccion: initial.categoria?.seccion?.nombre ?? "",
+          categoria: initial.categoria?.nombre ?? "",
+          descripcion: initial.descripcion ?? "",
+          etiquetas: initial.etiquetas,
+          favorito: initial.favorito,
         }
-      : emptyInput,
+      : formularioVacio,
   );
-  const [tagsRaw, setTagsRaw] = useState((initial?.tags ?? []).join(", "));
+  const [etiquetasRaw, setEtiquetasRaw] = useState((initial?.etiquetas ?? []).join(", "));
 
   return (
     <DialogContent className="max-w-lg">
@@ -207,18 +207,18 @@ function ToolForm({
         className="space-y-3"
         onSubmit={(e) => {
           e.preventDefault();
-          const tags = tagsRaw
+          const etiquetas = etiquetasRaw
             .split(",")
             .map((s) => s.trim())
             .filter(Boolean);
-          onSubmit({ ...form, tags });
+          onSubmit({ ...form, etiquetas });
         }}
       >
         <Field label="Nombre">
           <Input
             required
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            value={form.nombre}
+            onChange={(e) => setForm({ ...form, nombre: e.target.value })}
           />
         </Field>
         <Field label="URL">
@@ -234,37 +234,37 @@ function ToolForm({
             <Input
               required
               placeholder="JavaScript"
-              value={form.section}
-              onChange={(e) => setForm({ ...form, section: e.target.value })}
+              value={form.seccion}
+              onChange={(e) => setForm({ ...form, seccion: e.target.value })}
             />
           </Field>
           <Field label="Categoría">
             <Input
               required
               placeholder="Librerías JS"
-              value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
+              value={form.categoria}
+              onChange={(e) => setForm({ ...form, categoria: e.target.value })}
             />
           </Field>
         </div>
         <Field label="Descripción">
           <Textarea
             rows={3}
-            value={form.description ?? ""}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            value={form.descripcion ?? ""}
+            onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
           />
         </Field>
-        <Field label="Tags (separados por coma)">
+        <Field label="Etiquetas (separadas por coma)">
           <Input
-            value={tagsRaw}
-            onChange={(e) => setTagsRaw(e.target.value)}
+            value={etiquetasRaw}
+            onChange={(e) => setEtiquetasRaw(e.target.value)}
             placeholder="animación, ui, react"
           />
         </Field>
         <div className="flex items-center gap-2">
           <Switch
-            checked={form.is_favorite}
-            onCheckedChange={(v) => setForm({ ...form, is_favorite: v })}
+            checked={form.favorito}
+            onCheckedChange={(v) => setForm({ ...form, favorito: v })}
             id="fav"
           />
           <Label htmlFor="fav">Favorita</Label>

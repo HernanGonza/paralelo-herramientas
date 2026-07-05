@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, Search, Star, Settings, Sparkles } from "lucide-react";
-import { fetchTools, toggleFavorite, type Tool } from "@/lib/tools-api";
+import { fetchHerramientas, alternarFavorito, type Herramienta } from "@/lib/tools-api";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,52 +18,60 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
+function nombreSeccion(h: Herramienta) {
+  return h.categoria?.seccion?.nombre ?? "";
+}
+function nombreCategoria(h: Herramienta) {
+  return h.categoria?.nombre ?? "";
+}
+
 function Index() {
   const qc = useQueryClient();
-  const { data: tools = [], isLoading } = useQuery({
-    queryKey: ["tools"],
-    queryFn: fetchTools,
+  const { data: herramientas = [], isLoading } = useQuery({
+    queryKey: ["herramientas"],
+    queryFn: fetchHerramientas,
   });
 
-  const [section, setSection] = useState<string>("All");
-  const [category, setCategory] = useState<string>("All");
+  const [seccion, setSeccion] = useState<string>("Todas");
+  const [categoria, setCategoria] = useState<string>("Todas");
   const [q, setQ] = useState("");
-  const [onlyFav, setOnlyFav] = useState(false);
-  const [active, setActive] = useState<Tool | null>(null);
+  const [soloFav, setSoloFav] = useState(false);
+  const [activa, setActiva] = useState<Herramienta | null>(null);
 
-  const sections = useMemo(() => {
+  const secciones = useMemo(() => {
     const s = new Set<string>();
-    tools.forEach((t) => s.add(t.section));
-    return ["All", ...Array.from(s).sort()];
-  }, [tools]);
+    herramientas.forEach((h) => s.add(nombreSeccion(h)));
+    return ["Todas", ...Array.from(s).sort()];
+  }, [herramientas]);
 
-  const categories = useMemo(() => {
+  const categorias = useMemo(() => {
     const c = new Set<string>();
-    tools
-      .filter((t) => section === "All" || t.section === section)
-      .forEach((t) => c.add(t.category));
-    return ["All", ...Array.from(c).sort()];
-  }, [tools, section]);
+    herramientas
+      .filter((h) => seccion === "Todas" || nombreSeccion(h) === seccion)
+      .forEach((h) => c.add(nombreCategoria(h)));
+    return ["Todas", ...Array.from(c).sort()];
+  }, [herramientas, seccion]);
 
-  const filtered = useMemo(() => {
+  const filtradas = useMemo(() => {
     const query = q.trim().toLowerCase();
-    return tools.filter((t) => {
-      if (section !== "All" && t.section !== section) return false;
-      if (category !== "All" && t.category !== category) return false;
-      if (onlyFav && !t.is_favorite) return false;
+    return herramientas.filter((h) => {
+      if (seccion !== "Todas" && nombreSeccion(h) !== seccion) return false;
+      if (categoria !== "Todas" && nombreCategoria(h) !== categoria) return false;
+      if (soloFav && !h.favorito) return false;
       if (!query) return true;
       return (
-        t.name.toLowerCase().includes(query) ||
-        (t.description?.toLowerCase().includes(query) ?? false) ||
-        t.tags.some((tag) => tag.toLowerCase().includes(query)) ||
-        t.category.toLowerCase().includes(query)
+        h.nombre.toLowerCase().includes(query) ||
+        (h.descripcion?.toLowerCase().includes(query) ?? false) ||
+        h.etiquetas.some((tag) => tag.toLowerCase().includes(query)) ||
+        nombreCategoria(h).toLowerCase().includes(query)
       );
     });
-  }, [tools, section, category, q, onlyFav]);
+  }, [herramientas, seccion, categoria, q, soloFav]);
 
   const favMut = useMutation({
-    mutationFn: ({ id, next }: { id: string; next: boolean }) => toggleFavorite(id, next),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["tools"] }),
+    mutationFn: ({ id, siguiente }: { id: string; siguiente: boolean }) =>
+      alternarFavorito(id, siguiente),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["herramientas"] }),
   });
 
   return (
@@ -98,7 +106,7 @@ function Index() {
       </header>
 
       <main className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6">
-        {/* Search + fav filter */}
+        {/* Buscador + favoritos */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -110,27 +118,27 @@ function Index() {
             />
           </div>
           <Button
-            variant={onlyFav ? "default" : "outline"}
-            onClick={() => setOnlyFav((v) => !v)}
+            variant={soloFav ? "default" : "outline"}
+            onClick={() => setSoloFav((v) => !v)}
             className="gap-1.5"
           >
-            <Star className={"h-4 w-4 " + (onlyFav ? "fill-current" : "")} />
+            <Star className={"h-4 w-4 " + (soloFav ? "fill-current" : "")} />
             Favoritos
           </Button>
         </div>
 
-        {/* Section tabs */}
+        {/* Tabs de sección */}
         <div className="mt-5 -mx-1 flex gap-1 overflow-x-auto px-1 pb-1">
-          {sections.map((s) => (
+          {secciones.map((s) => (
             <button
               key={s}
               onClick={() => {
-                setSection(s);
-                setCategory("All");
+                setSeccion(s);
+                setCategoria("Todas");
               }}
               className={
                 "shrink-0 rounded-md px-3 py-1.5 font-mono text-xs transition-colors " +
-                (section === s
+                (seccion === s
                   ? "bg-primary text-primary-foreground"
                   : "bg-secondary text-secondary-foreground hover:bg-muted")
               }
@@ -140,16 +148,16 @@ function Index() {
           ))}
         </div>
 
-        {/* Category chips */}
-        {categories.length > 1 && (
+        {/* Chips de categoría */}
+        {categorias.length > 1 && (
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {categories.map((c) => (
+            {categorias.map((c) => (
               <button
                 key={c}
-                onClick={() => setCategory(c)}
+                onClick={() => setCategoria(c)}
                 className={
                   "rounded-full border px-2.5 py-0.5 font-mono text-[11px] transition-colors " +
-                  (category === c
+                  (categoria === c
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-border text-muted-foreground hover:text-foreground")
                 }
@@ -160,24 +168,22 @@ function Index() {
           </div>
         )}
 
-        {/* Grid */}
+        {/* Grilla */}
         <div className="mt-6">
           {isLoading ? (
             <p className="py-16 text-center font-mono text-sm text-muted-foreground">
               cargando…
             </p>
-          ) : filtered.length === 0 ? (
-            <EmptyState hasAny={tools.length > 0} />
+          ) : filtradas.length === 0 ? (
+            <EmptyState hasAny={herramientas.length > 0} />
           ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((t) => (
+              {filtradas.map((h) => (
                 <ToolCard
-                  key={t.id}
-                  tool={t}
-                  onOpen={() => setActive(t)}
-                  onFav={() =>
-                    favMut.mutate({ id: t.id, next: !t.is_favorite })
-                  }
+                  key={h.id}
+                  herramienta={h}
+                  onOpen={() => setActiva(h)}
+                  onFav={() => favMut.mutate({ id: h.id, siguiente: !h.favorito })}
                 />
               ))}
             </div>
@@ -185,21 +191,21 @@ function Index() {
         </div>
 
         <p className="mt-8 text-center font-mono text-xs text-muted-foreground">
-          {filtered.length} / {tools.length} recursos
+          {filtradas.length} / {herramientas.length} recursos
         </p>
       </main>
 
-      <ToolDetail tool={active} onClose={() => setActive(null)} />
+      <ToolDetail herramienta={activa} onClose={() => setActiva(null)} />
     </div>
   );
 }
 
 function ToolCard({
-  tool,
+  herramienta,
   onOpen,
   onFav,
 }: {
-  tool: Tool;
+  herramienta: Herramienta;
   onOpen: () => void;
   onFav: () => void;
 }) {
@@ -209,15 +215,12 @@ function ToolCard({
       style={{ boxShadow: "var(--shadow-card)" }}
     >
       <div className="flex items-start gap-2">
-        <button
-          onClick={onOpen}
-          className="min-w-0 flex-1 text-left"
-        >
+        <button onClick={onOpen} className="min-w-0 flex-1 text-left">
           <h3 className="truncate font-mono text-sm font-semibold text-foreground group-hover:text-primary">
-            {tool.name}
+            {herramienta.nombre}
           </h3>
           <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
-            {tool.section} / {tool.category}
+            {nombreSeccion(herramienta)} / {nombreCategoria(herramienta)}
           </p>
         </button>
         <button
@@ -225,29 +228,29 @@ function ToolCard({
           aria-label="Favorito"
           className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-primary"
         >
-          <Star className={"h-4 w-4 " + (tool.is_favorite ? "fill-primary text-primary" : "")} />
+          <Star className={"h-4 w-4 " + (herramienta.favorito ? "fill-primary text-primary" : "")} />
         </button>
       </div>
 
-      {tool.description && (
+      {herramienta.descripcion && (
         <p
           onClick={onOpen}
           className="mt-3 line-clamp-3 cursor-pointer text-sm text-muted-foreground"
         >
-          {tool.description}
+          {herramienta.descripcion}
         </p>
       )}
 
-      {tool.tags.length > 0 && (
+      {herramienta.etiquetas.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1">
-          {tool.tags.slice(0, 4).map((tag) => (
+          {herramienta.etiquetas.slice(0, 4).map((tag) => (
             <Badge key={tag} variant="secondary" className="font-mono text-[10px]">
               {tag}
             </Badge>
           ))}
-          {tool.tags.length > 4 && (
+          {herramienta.etiquetas.length > 4 && (
             <span className="font-mono text-[10px] text-muted-foreground">
-              +{tool.tags.length - 4}
+              +{herramienta.etiquetas.length - 4}
             </span>
           )}
         </div>
@@ -261,7 +264,7 @@ function ToolCard({
           Ver detalle
         </button>
         <a
-          href={tool.url}
+          href={herramienta.url}
           target="_blank"
           rel="noreferrer noopener"
           className="inline-flex items-center gap-1 font-mono text-[11px] text-primary hover:underline"
@@ -273,26 +276,32 @@ function ToolCard({
   );
 }
 
-function ToolDetail({ tool, onClose }: { tool: Tool | null; onClose: () => void }) {
+function ToolDetail({
+  herramienta,
+  onClose,
+}: {
+  herramienta: Herramienta | null;
+  onClose: () => void;
+}) {
   return (
-    <Dialog open={!!tool} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open={!!herramienta} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-lg">
-        {tool && (
+        {herramienta && (
           <>
             <DialogHeader>
-              <DialogTitle className="font-mono">{tool.name}</DialogTitle>
+              <DialogTitle className="font-mono">{herramienta.nombre}</DialogTitle>
               <DialogDescription className="font-mono text-xs">
-                {tool.section} / {tool.category}
+                {nombreSeccion(herramienta)} / {nombreCategoria(herramienta)}
               </DialogDescription>
             </DialogHeader>
-            {tool.description && (
+            {herramienta.descripcion && (
               <p className="whitespace-pre-wrap text-sm text-foreground/90">
-                {tool.description}
+                {herramienta.descripcion}
               </p>
             )}
-            {tool.tags.length > 0 && (
+            {herramienta.etiquetas.length > 0 && (
               <div className="flex flex-wrap gap-1">
-                {tool.tags.map((tag) => (
+                {herramienta.etiquetas.map((tag) => (
                   <Badge key={tag} variant="secondary" className="font-mono text-[10px]">
                     {tag}
                   </Badge>
@@ -301,7 +310,7 @@ function ToolDetail({ tool, onClose }: { tool: Tool | null; onClose: () => void 
             )}
             <div className="flex justify-end">
               <Button asChild>
-                <a href={tool.url} target="_blank" rel="noreferrer noopener">
+                <a href={herramienta.url} target="_blank" rel="noreferrer noopener">
                   Abrir <ExternalLink className="ml-1.5 h-4 w-4" />
                 </a>
               </Button>
