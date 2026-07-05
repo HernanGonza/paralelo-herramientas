@@ -209,11 +209,30 @@ function ToolCard({
   onOpen: () => void;
   onFav: () => void;
 }) {
+  const [imgError, setImgError] = useState(false);
+  const thumbUrl = `https://s0.wp.com/mshots/v1/${encodeURIComponent(herramienta.url)}?w=600`;
+
   return (
     <article
-      className="group relative flex flex-col rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/60 hover:shadow-[var(--shadow-card)]"
+      className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-all hover:border-primary/60 hover:shadow-[var(--shadow-card)]"
       style={{ boxShadow: "var(--shadow-card)" }}
     >
+      {!imgError && (
+        <button
+          onClick={onOpen}
+          className="block aspect-[16/9] w-full overflow-hidden bg-muted"
+        >
+          <img
+            src={thumbUrl}
+            alt=""
+            loading="lazy"
+            onError={() => setImgError(true)}
+            className="h-full w-full object-cover object-top transition-transform group-hover:scale-105"
+          />
+        </button>
+      )}
+
+      <div className="flex flex-1 flex-col p-4">
       <div className="flex items-start gap-2">
         <button onClick={onOpen} className="min-w-0 flex-1 text-left">
           <h3 className="truncate font-mono text-sm font-semibold text-foreground group-hover:text-primary">
@@ -271,6 +290,7 @@ function ToolCard({
         >
           Abrir <ExternalLink className="h-3 w-3" />
         </a>
+      </div>
       </div>
     </article>
   );
