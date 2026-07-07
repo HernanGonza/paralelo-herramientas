@@ -96,12 +96,6 @@ function Index() {
             </div>
           </div>
           <div className="flex-1" />
-          <Button asChild variant="outline" size="sm" className="gap-1.5">
-            <Link to="/admin">
-              <Settings className="h-4 w-4" />
-              <span className="hidden sm:inline">Admin</span>
-            </Link>
-          </Button>
         </div>
       </header>
 
